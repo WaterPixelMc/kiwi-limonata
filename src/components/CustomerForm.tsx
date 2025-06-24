@@ -113,7 +113,7 @@ const CustomerForm = () => {
           <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
             <Coffee className="w-8 h-8 text-white" />
           </div>
-          <CardTitle className="text-3xl font-bold text-gray-800">Sunny'nin Limonatası</CardTitle>
+          <CardTitle className="text-3xl font-bold text-gray-800">Kiwi'nin Limonatası</CardTitle>
           <CardDescription className="text-gray-600">
             Taze, soğuk ve mükemmel tatlılıkta! 🍋
           </CardDescription>
