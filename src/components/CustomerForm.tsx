@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Lemon, Sparkles } from 'lucide-react';
+import { Coffee, Sparkles } from 'lucide-react';
 import { generateShortId } from '@/utils/idGenerator';
 
 interface Order {
@@ -87,7 +87,7 @@ const CustomerForm = () => {
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
         <CardHeader className="text-center pb-2">
           <div className="mx-auto mb-4 w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-400 rounded-full flex items-center justify-center">
-            <Lemon className="w-8 h-8 text-white" />
+            <Coffee className="w-8 h-8 text-white" />
           </div>
           <CardTitle className="text-3xl font-bold text-gray-800">Sunny's Lemonade</CardTitle>
           <CardDescription className="text-gray-600">
