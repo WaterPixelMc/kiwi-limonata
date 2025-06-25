@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Coffee, Sparkles, Settings } from 'lucide-react';
 import { generateShortId } from '@/utils/idGenerator';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Order {
   id: string;
-  name: string;
-  timestamp: string;
+  customer_name: string;
+  created_at: string;
 }
 
 const CustomerForm = () => {
@@ -18,31 +20,50 @@ const CustomerForm = () => {
   const [generatedId, setGeneratedId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
 
     setIsLoading(true);
     
-    // Simulate a brief loading time for better UX
-    setTimeout(() => {
+    try {
       const shortId = generateShortId();
-      const order: Order = {
-        id: shortId,
-        name: name.trim(),
-        timestamp: new Date().toISOString()
-      };
+      
+      // Save to Supabase database
+      const { error } = await supabase
+        .from('lemonade_orders')
+        .insert([
+          {
+            id: shortId,
+            customer_name: name.trim()
+          }
+        ]);
 
-      // Save to localStorage
-      const existingOrders = JSON.parse(localStorage.getItem('lemonadeOrders') || '[]');
-      existingOrders.push(order);
-      localStorage.setItem('lemonadeOrders', JSON.stringify(existingOrders));
+      if (error) {
+        console.error('Error saving order:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save order. Please try again.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
 
+      console.log('Order saved to database:', { id: shortId, name: name.trim() });
       setGeneratedId(shortId);
       setIsLoading(false);
-      console.log('Order created:', order);
-    }, 800);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create order. Please try again.",
+        variant: "destructive"
+      });
+      setIsLoading(false);
+    }
   };
 
   const handleNewOrder = () => {

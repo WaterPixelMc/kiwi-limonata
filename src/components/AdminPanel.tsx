@@ -6,11 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Shield, Users, Clock, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Order {
   id: string;
-  name: string;
-  timestamp: string;
+  customer_name: string;
+  created_at: string;
 }
 
 const AdminPanel = () => {
@@ -19,7 +21,9 @@ const AdminPanel = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -27,12 +31,36 @@ const AdminPanel = () => {
     }
   }, [isAuthenticated]);
 
-  const loadOrders = () => {
-    const savedOrders = JSON.parse(localStorage.getItem('lemonadeOrders') || '[]');
-    setOrders(savedOrders.sort((a: Order, b: Order) => 
-      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-    ));
-    console.log('Loaded orders:', savedOrders);
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('lemonade_orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading orders:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load orders from database.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setOrders(data || []);
+      console.log('Loaded orders from database:', data);
+    } catch (error) {
+      console.error('Error fetching orders:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch orders. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleLogin = (e: React.FormEvent) => {
@@ -47,11 +75,39 @@ const AdminPanel = () => {
     }
   };
 
-  const handleDeleteOrder = (orderId: string) => {
-    const updatedOrders = orders.filter(order => order.id !== orderId);
-    setOrders(updatedOrders);
-    localStorage.setItem('lemonadeOrders', JSON.stringify(updatedOrders));
-    console.log('Deleted order:', orderId);
+  const handleDeleteOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('lemonade_orders')
+        .delete()
+        .eq('id', orderId);
+
+      if (error) {
+        console.error('Error deleting order:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete order.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      const updatedOrders = orders.filter(order => order.id !== orderId);
+      setOrders(updatedOrders);
+      console.log('Deleted order:', orderId);
+      
+      toast({
+        title: "Success",
+        description: "Order deleted successfully.",
+      });
+    } catch (error) {
+      console.error('Error deleting order:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete order. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const formatTimestamp = (timestamp: string) => {
@@ -146,8 +202,9 @@ const AdminPanel = () => {
                   onClick={loadOrders}
                   variant="outline"
                   className="bg-blue-50 hover:bg-blue-100 border-blue-200"
+                  disabled={isLoading}
                 >
-                  Refresh
+                  {isLoading ? 'Loading...' : 'Refresh'}
                 </Button>
                 <Button 
                   onClick={handleBackToMain}
@@ -169,7 +226,7 @@ const AdminPanel = () => {
                   <h3 className="text-lg font-semibold">Today's Orders</h3>
                   <p className="text-3xl font-bold">
                     {orders.filter(order => 
-                      new Date(order.timestamp).toDateString() === new Date().toDateString()
+                      new Date(order.created_at).toDateString() === new Date().toDateString()
                     ).length}
                   </p>
                 </div>
@@ -180,7 +237,12 @@ const AdminPanel = () => {
               </div>
             </div>
 
-            {orders.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p className="text-gray-600">Loading orders...</p>
+              </div>
+            ) : orders.length === 0 ? (
               <div className="text-center py-12">
                 <Clock className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-500 mb-2">No orders yet</h3>
@@ -203,9 +265,9 @@ const AdminPanel = () => {
                         <TableCell className="font-mono font-semibold text-blue-600">
                           {order.id}
                         </TableCell>
-                        <TableCell className="font-medium">{order.name}</TableCell>
+                        <TableCell className="font-medium">{order.customer_name}</TableCell>
                         <TableCell className="text-gray-600">
-                          {formatTimestamp(order.timestamp)}
+                          {formatTimestamp(order.created_at)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Button
